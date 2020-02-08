@@ -21,7 +21,12 @@ public class Shooter extends Threaded {
 
     public static boolean DEBUG = true;
     public static int setpoint = 0; // rotations per minute
-    public static double output, error, startVoltage, voltage, pastError, time, pastTime;
+    double setpoint;
+    double current = 0;
+    double error = 0;
+    double output = 0;
+    double accumulator = 0;
+    double prevError = 0;
 
     private Shooter() {
         configMotors();
@@ -54,23 +59,44 @@ public class Shooter extends Threaded {
 
     public static void setSetpoint(int passedSetpoint) {
         setpoint = passedSetpoint;
-        pastError = setpoint - getRPM();
-        pastTime = Timer.getFPGATimestamp();
     }
 
     @Override
     public void update() {
-        time = Timer.getFPGATimestamp();
-        error = setpoint - getRPM();
-        output = Constants.K_SHOOTER_P * error + Constants.K_SHOOTER_D * (pastError - error) / (pastTime - time);
-        voltage = RobotController.getBatteryVoltage();
+        current = getRPM();
+        error = setpoint - current;
+        accumulator += error * Constants.DT;
+        if (accumulator > Constants.SHOOTER_SATURATION_LIMIT) {
+            accumulator = Constants.SHOOTER_SATURATION_LIMIT;
+        } else if (accumulator < -Constants.SHOOTER_SATURATION_LIMIT) {
+            accumulator = -Constants.SHOOTER_SATURATION_LIMIT;
+        }
+        double kP_term = Constants.kP_SHOOTER * error;
+        double kI_term = Constants.kI_SHOOTER * accumulator;
+        double kD_term = Constants.kD_SHOOTER * (error - prevError) / Constants.DT;
+
+        double voltage_output = shooterFeedForward(setpoint) + kP_term + kI_term + kD_term;
+        double voltage = RobotController.getBatteryVoltage();
+
+        output = voltage_output / voltage;
+
+        prevError = error;
+        if (output > 1) {
+            Log.info("SHOOTER",
+                    "WARNING: Tried to set power above available voltage! Saturation limit SHOULD take care of this ");
+            output = 1;
+        } else if (output < -1) {
+            Log.info("SHOOTER",
+                    "WARNING: Tried to set power above available voltage! Saturation limit SHOULD take care of this ");
+            output = -1;
+        }
+
         LEFT_SHOOTER.set(output);
         RIGHT_SHOOTER.set(-output);
-        if (DEBUG) {
-            Log.info("Shooter", "Error  is: " + error + ", vel is: " + getRPM() + ", output is: " + output
-                    + ", voltage is " + (startVoltage - voltage));
-        }
-        pastError = error;
-        pastTime = time;
+
+    }
+
+    private double shooterFeedForward(int setpoint2) {
+        return 0; // TODO: add feedforward implementation for arm control
     }
 }
