@@ -20,23 +20,24 @@ public class Shooter extends Threaded {
     public static CANEncoder SHOOTER_ENCODER;
 
     public static boolean DEBUG = true;
-    public static int setpoint = 0; // rotations per minute
-    double setpoint;
+    static double setpoint = 0; // rotations per minute
     double current = 0;
     double error = 0;
-    double output = 0;
+    public double output = 0;
     double accumulator = 0;
     double prevError = 0;
+
+    int plateauCount = 0;
 
     private Shooter() {
         configMotors();
         configEncoders();
-        startVoltage = RobotController.getBatteryVoltage();
+        setSetpoint(0);
     }
 
     private void configMotors() {
-        LEFT_SHOOTER = new LazyCANSparkMax(Constants.SHOOTER_MOTOR_LEFT_ID, MotorType.kBrushless);
-        RIGHT_SHOOTER = new LazyCANSparkMax(Constants.SHOOTER_MOTOR_RIGHT_ID, MotorType.kBrushless);
+        LEFT_SHOOTER = new LazyCANSparkMax(Constants.ShooterConstants.SHOOTER_MOTOR_LEFT_ID, MotorType.kBrushless);
+        RIGHT_SHOOTER = new LazyCANSparkMax(Constants.ShooterConstants.SHOOTER_MOTOR_RIGHT_ID, MotorType.kBrushless);
         if (DEBUG) {
             Log.info("Shooter", "Config motors");
         }
@@ -54,33 +55,43 @@ public class Shooter extends Threaded {
     }
 
     public static double getRPM() {
-        return SHOOTER_ENCODER.getVelocity();
+        return Constants.ShooterConstants.SHOOTER_GEARING * SHOOTER_ENCODER.getVelocity();
     }
 
-    public static void setSetpoint(int passedSetpoint) {
+    public void setSetpoint(double passedSetpoint) {
         setpoint = passedSetpoint;
+        Log.info("Shooter", "Set setpoint to" + String.valueOf(setpoint));
     }
 
     @Override
     public void update() {
         current = getRPM();
+        // Log.info("Shooter", "Shooter RPM is " + String.valueOf(current));
         error = setpoint - current;
-        accumulator += error * Constants.DT;
-        if (accumulator > Constants.SHOOTER_SATURATION_LIMIT) {
-            accumulator = Constants.SHOOTER_SATURATION_LIMIT;
-        } else if (accumulator < -Constants.SHOOTER_SATURATION_LIMIT) {
-            accumulator = -Constants.SHOOTER_SATURATION_LIMIT;
+        accumulator += error * Constants.MechanismConstants.DT;
+        if (accumulator > Constants.ShooterConstants.SHOOTER_SATURATION_LIMIT) {
+            accumulator = Constants.ShooterConstants.SHOOTER_SATURATION_LIMIT;
+        } else if (accumulator < -Constants.ShooterConstants.SHOOTER_SATURATION_LIMIT) {
+            accumulator = -Constants.ShooterConstants.SHOOTER_SATURATION_LIMIT;
         }
-        double kP_term = Constants.kP_SHOOTER * error;
-        double kI_term = Constants.kI_SHOOTER * accumulator;
-        double kD_term = Constants.kD_SHOOTER * (error - prevError) / Constants.DT;
+        double kP_term = Constants.ShooterConstants.SHOOTER_PID.kP * error;
+        double kI_term = Constants.ShooterConstants.SHOOTER_PID.kI * accumulator;
+        double kD_term = Constants.ShooterConstants.SHOOTER_PID.kD * (error - prevError)
+                / Constants.MechanismConstants.DT;
 
         double voltage_output = shooterFeedForward(setpoint) + kP_term + kI_term + kD_term;
-        double voltage = RobotController.getBatteryVoltage();
+        double voltage = RobotController.getBatteryVoltage(); // TODO: investigate bus voltage
 
         output = voltage_output / voltage;
 
         prevError = error;
+
+        if (Math.abs(error) <= Constants.ShooterConstants.RPM_THRESHOLD) {
+            plateauCount++;
+        } else {
+            plateauCount = 0;
+        }
+
         if (output > 1) {
             Log.info("SHOOTER",
                     "WARNING: Tried to set power above available voltage! Saturation limit SHOULD take care of this ");
@@ -93,10 +104,19 @@ public class Shooter extends Threaded {
 
         LEFT_SHOOTER.set(output);
         RIGHT_SHOOTER.set(-output);
-
     }
 
-    private double shooterFeedForward(int setpoint2) {
-        return 0; // TODO: add feedforward implementation for arm control
+    public double shooterFeedForward(double desiredSetpoint) {
+        double ff = (0.00211 * desiredSetpoint) + 0.051; // 0.041
+        return ff;
+    }
+
+    public double getRPMFromDistance(double distance) {
+        return 5300;
+        // TODO: relationship between RPM and distance
+    }
+
+    public boolean isReady() {
+        return (plateauCount > Constants.ShooterConstants.PLATEAU_COUNT);
     }
 }

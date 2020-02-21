@@ -14,7 +14,7 @@ public class Intake extends Threaded {
     public static final Intake instance = new Intake();
     LazyCANSparkMax INTAKE_MOTOR;
 
-    public Intake getInstance() {
+    public static Intake getInstance() {
         return instance;
     }
 
@@ -23,15 +23,15 @@ public class Intake extends Threaded {
     }
 
     private void configMotors() {
-        INTAKE_MOTOR = new LazyCANSparkMax(Constants.INTAKE_MOTOR_ID, MotorType.kBrushless);
+        INTAKE_MOTOR = new LazyCANSparkMax(Constants.IntakeConstants.INTAKE_MOTOR_ID, MotorType.kBrushless);
     }
 
     public void turnOn() {
-        INTAKE_MOTOR.set(Constants.INTAKE_MOTOR_ON_VALUE);
+        INTAKE_MOTOR.set(Constants.IntakeConstants.INTAKE_MOTOR_ON_VALUE);
     }
 
     public void turnOff() {
-        INTAKE_MOTOR.set(Constants.INTAKE_MOTOR_OFF_VALUE);
+        INTAKE_MOTOR.set(Constants.IntakeConstants.INTAKE_MOTOR_OFF_VALUE);
     }
 
     @Override
