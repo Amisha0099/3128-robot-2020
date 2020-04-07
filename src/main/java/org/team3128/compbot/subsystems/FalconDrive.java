@@ -19,7 +19,6 @@ import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.FeedbackDevice;
 import com.ctre.phoenix.motorcontrol.NeutralMode;
 
-import edu.wpi.first.wpilibj.ADXRS450_Gyro;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.Solenoid;
@@ -28,6 +27,8 @@ import org.team3128.common.hardware.motor.LazyTalonFX;
 import org.team3128.common.utility.RobotMath;
 
 import edu.wpi.first.wpilibj.Timer;
+
+import com.kauailabs.navx.frc.AHRS;
 
 import org.team3128.common.utility.Log;
 import org.team3128.common.drive.Drive;
@@ -44,7 +45,8 @@ public class FalconDrive extends Drive {
 		return instance;
 	}
 
-	private ADXRS450_Gyro gyroSensor;
+	// private ADXRS450_Gyro gyroSensor;
+	public AHRS ahrs;
 	// private LazyTalonSRX leftTalon, rightTalon, leftSlaveTalon, leftSlave2Talon,
 	// rightSlaveTalon, rightSlave2Talon;
 	private RamseteController autonomousDriver;
@@ -62,18 +64,26 @@ public class FalconDrive extends Drive {
 	double prevPositionL = 0;
 	double prevPositionR = 0;
 
+	double startTimeControl;
+	double endTime = 0;
+
 	public LazyTalonFX leftTalon, rightTalon, leftTalonSlave, rightTalonSlave, leftTalonSlave2, rightTalonSlave2;
+
+	public double left_setpoint, right_setpoint;
 
 	private FalconDrive() {
 
-		gyroSensor = new ADXRS450_Gyro(SPI.Port.kOnboardCS0);
+		// gyroSensor = new ADXRS450_Gyro(SPI.Port.kOnboardCS0);
+		ahrs = new AHRS(SPI.Port.kMXP);
 
-		leftTalon = new LazyTalonFX(Constants.DriveConstants.LEFT_DRIVE_FRONT_ID);
-		leftTalonSlave = new LazyTalonFX(Constants.DriveConstants.LEFT_DRIVE_MIDDLE_ID);
+		//left and right are flipped because the driver wanted to flip the direction of driving.
+
+		rightTalon = new LazyTalonFX(Constants.DriveConstants.LEFT_DRIVE_FRONT_ID);
+		rightTalonSlave = new LazyTalonFX(Constants.DriveConstants.LEFT_DRIVE_MIDDLE_ID);
 		// leftTalonSlave2 = new LazyTalonFX(Constants.LEFT_DRIVE_BACK_ID);
 
-		rightTalon = new LazyTalonFX(Constants.DriveConstants.RIGHT_DRIVE_FRONT_ID);
-		rightTalonSlave = new LazyTalonFX(Constants.DriveConstants.RIGHT_DRIVE_MIDDLE_ID);
+		leftTalon = new LazyTalonFX(Constants.DriveConstants.RIGHT_DRIVE_FRONT_ID);
+		leftTalonSlave = new LazyTalonFX(Constants.DriveConstants.RIGHT_DRIVE_MIDDLE_ID);
 		// rightTalonSlave2 = new LazyTalonFX(Constants.RIGHT_DRIVE_BACK_ID);
 
 		leftTalon.setInverted(true);
@@ -142,7 +152,7 @@ public class FalconDrive extends Drive {
 
 	@Override
 	public void calibrateGyro() {
-		gyroSensor.calibrate();
+		// gyroSensor.calibrate();
 	}
 
 	@Override
@@ -173,7 +183,7 @@ public class FalconDrive extends Drive {
 
 	@Override
 	public double getAngle() {
-		return -gyroSensor.getAngle();
+		return ahrs.getAngle();
 	}
 
 	@Override
@@ -184,7 +194,7 @@ public class FalconDrive extends Drive {
 	@Override
 	public Rotation2D getGyroAngle() {
 		// -180 through 180
-		return Rotation2D.fromDegrees(gyroSensor.getAngle());
+		return Rotation2D.fromDegrees(getAngle());
 	}
 
 	@Override
@@ -226,7 +236,7 @@ public class FalconDrive extends Drive {
 			Log.info("FalconDrive", "Returned to teleop control");
 			driveState = DriveState.TELEOP;
 		} else {
-			configAuto();
+			//configAuto();
 			updateRamseteController(true);
 			driveState = DriveState.RAMSETECONTROL;
 		}
@@ -255,15 +265,9 @@ public class FalconDrive extends Drive {
 			DriverStation.reportError("Velocity set over " + Constants.DriveConstants.DRIVE_HIGH_SPEED + " !", false);
 			return;
 		}
-		// inches per sec to nu/100ms
-		double leftSetpoint = (setVelocity.leftVelocity) * 1 / Constants.DriveConstants.kDriveInchesPerSecPerNUp100ms;
-		double rightSetpoint = (setVelocity.rightVelocity) * 1 / Constants.DriveConstants.kDriveInchesPerSecPerNUp100ms;
-		leftTalon.set(ControlMode.Velocity, leftSetpoint);
-		// Log.info("FalconDrive", "setWheelVelocity: " + "leftSetpoint = " +
-		// String.valueOf(leftSetpoint));
-		rightTalon.set(ControlMode.Velocity, rightSetpoint);
-		// Log.info("FalconDrive", "setWheelVelocity: " + "rightSetpoint = " +
-		// String.valueOf(rightSetpoint));
+
+		left_setpoint = setVelocity.leftVelocity;
+		right_setpoint = setVelocity.rightVelocity;
 	}
 
 	/**
@@ -305,20 +309,16 @@ public class FalconDrive extends Drive {
 
 		spdL = Constants.DriveConstants.DRIVE_HIGH_SPEED * pwrL;
 		spdR = Constants.DriveConstants.DRIVE_HIGH_SPEED * pwrR;
-		String tempStr = "pwrL=" + String.valueOf(pwrL) + ", pwrR=" + String.valueOf(pwrR) + ", spdL="
-				+ String.valueOf(spdL) + ", spdR=" + String.valueOf(spdR);
-		Log.info("FalconDrive", tempStr);
+		// String tempStr = "pwrL=" + String.valueOf(pwrL) + ", pwrR=" + String.valueOf(pwrR) + ", spdL="
+		// 		+ String.valueOf(spdL) + ", spdR=" + String.valueOf(spdR);
+		// Log.info("FalconDrive", tempStr);
 		setWheelPower(new DriveSignal(pwrL, pwrR));
 		// setWheelVelocity(new DriveSignal(spdL, spdR));
 	}
 
 	@Override
 	public void update() {
-		// System.out.println("L speed " + getLeftSpeed() + " position x " +
-		// RobotTracker.getInstance().getOdometry().translationMat.getX());
-		// System.out.println("R speed " + getRightSpeed() + " position y " +
-		// RobotTracker.getInstance().getOdometry().translationMat.getY());
-		// System.out.println(driveState);
+		// velocityController();
 		DriveState snapDriveState;
 		synchronized (this) {
 			snapDriveState = driveState;
@@ -333,6 +333,59 @@ public class FalconDrive extends Drive {
 				updateTurn();
 				break;
 		}
+	}
+
+	private void velocityController() {
+		double ks_sign = 1;
+
+		if (left_setpoint < 0) {
+			ks_sign = -1;
+		}
+
+		if (left_setpoint == 0) {
+			ks_sign = 0;
+		}
+		double error = left_setpoint - getLeftSpeed();
+		double feedforward_left = (Constants.DriveConstants.kS * ks_sign) + (left_setpoint * Constants.DriveConstants.kV); //TODO: add acceleration to this
+		double voltage_applied_left = feedforward_left + (Constants.DriveConstants.kP*error);
+
+		ks_sign = 1;
+
+		//the next few conditional statements ensure that the y intercept is pushed to the right direction (in case out path includes going backwards)
+
+		if (right_setpoint < 0) {
+			ks_sign = -1;
+		}
+
+		if (right_setpoint == 0) {
+			ks_sign = 0;
+		}
+
+
+		// applied_voltage = kS + (desired velocity * kV) [we currently ignore acceleration and emit PID which might be a bad assumption]
+		error = right_setpoint - getRightSpeed();
+		double feedforward_right = (Constants.DriveConstants.kS * ks_sign) + (right_setpoint * Constants.DriveConstants.kV); //TODO: add acceleration to this
+		double voltage_applied_right = feedforward_right + (Constants.DriveConstants.kP*error);
+
+
+		double leftAvaliableVoltage = leftTalon.getBusVoltage();
+		double rightAvaliableVoltage = rightTalon.getBusVoltage();
+
+		//Log.info("FalconDrive", "left_voltage = " + String.valueOf(voltage_applied_left) + ", right_voltage = " + String.valueOf(voltage_applied_right));
+
+		double leftPower = voltage_applied_left / leftAvaliableVoltage;
+		double rightPower = voltage_applied_right / rightAvaliableVoltage;
+
+		if ((Math.abs(leftPower) > 1) || (Math.abs(rightPower) > 1)) {
+			Log.info("Drive", "Tried to set a voltage greater than the avaliable voltage");
+			leftPower = RobotMath.clampPosNeg1(leftPower);
+			rightPower = RobotMath.clampPosNeg1(rightPower);
+		}
+
+		leftTalon.set(ControlMode.PercentOutput, leftPower);
+		rightTalon.set(ControlMode.PercentOutput, rightPower);
+
+		endTime = Timer.getFPGATimestamp();
 	}
 
 	@Override
@@ -411,7 +464,7 @@ public class FalconDrive extends Drive {
 
 	@Override
 	public void resetGyro() {
-		gyroSensor.reset();
+		ahrs.reset();
 	}
 
 	@Override

@@ -81,7 +81,6 @@ import com.revrobotics.*;
 import com.revrobotics.CANSparkMax.IdleMode;
 import com.revrobotics.CANSparkMaxLowLevel.MotorType;
 
-import edu.wpi.first.wpilibj.ADXRS450_Gyro;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.Solenoid;
@@ -100,160 +99,88 @@ import edu.wpi.first.wpilibj.Timer;
 import org.team3128.common.utility.Log;
 public abstract class Drive extends Threaded {
 
-public void debug() {
+    public abstract void debug();
 
-}
+    public abstract void debugSpeed();
 
-public void debugSpeed() {
+    public abstract void setRight();
 
+    public abstract void configAuto();
 
-}
+    public abstract void configHigh();
 
-public void setRight() {
+    public abstract void setTeleop(); //should be synchronized
 
-}
+    public abstract void calibrateGyro();
 
-public void configAuto() {
+    public abstract void printCurrent();
 
-}
+    public abstract void configMotors();
 
-public void configHigh() {
+    public abstract void resetMotionProfile();
 
-}
+    public abstract double getAngle();
 
+    public abstract double getDistance();
 
-synchronized public void setTeleop() {
+    public abstract Rotation2D getGyroAngle();
 
-}
+    public abstract double getLeftDistance();
 
-public void calibrateGyro() {
+    public abstract double getRightDistance();
 
-}
+    public abstract double getSpeed();
 
-public void printCurrent() {
+    public abstract double getLeftSpeed();
 
-}
+    public abstract double getRightSpeed();
 
-public void configMotors() {
+    public abstract void setAutoTrajectory(Trajectory autoTraj, boolean isReversed); // synchronized
 
-}
+    public abstract void startTrajectory(); // synchronized
 
-public void resetMotionProfile() {
+    public abstract void setBrakeState(NeutralMode mode);
 
-}
+    public abstract double getVoltage();
 
-public double getAngle() {
-    return 0;
-}
+    public abstract void setWheelPower(DriveSignal signal);
 
-public double getDistance() {
-    return 0;
-}
+    public abstract void setWheelVelocity(DriveSignal setVelocity);
 
-public Rotation2D getGyroAngle() {
-    return new Rotation2D(0,0); //do not use this at all ok
-}
+    /**
+     * Update the motor outputs with the given control values.
+     *
+     * @param joyX     horizontal control input
+     * @param joyY     vertical control input
+     * @param throttle throttle control input scaled between 1 and -1 (-.8 is 10 %,
+     *                 0 is 50%, 1.0 is 100%)
+     */
+    public abstract void arcadeDrive(double joyX, double joyY, double throttle, boolean fullSpeed);
 
-public double getLeftDistance() {
-    return 0;
-}
+    @Override
+    public abstract void update();
 
-public double getRightDistance() {
-    return 0;
-}
+    public abstract void setRotation(Rotation2D angle);
 
-public double getSpeed() {
-    return 0;
-}
+    /**
+     * Set Velocity PID for both sides of the drivetrain (to the same constants)
+     */
+    public abstract void setDualVelocityPID(double kP, double kD, double kF);
 
-public double getLeftSpeed() {
-    return 0;
-}
+    public abstract void updateTurn();
 
-public double getRightSpeed() {
-    return 0;
-}
+    public abstract void setShiftState(boolean state);
 
-public synchronized void setAutoTrajectory(Trajectory autoTraj, boolean isReversed) {
+    public abstract void updateRamseteController(boolean isStart);
 
-}
+    public abstract void resetGyro();
 
-public synchronized void startTrajectory() {
+    public abstract boolean checkSubsystem();
 
-}
+    public abstract void stopMovement(); // synchronized
 
-public void setBrakeState(NeutralMode mode) {
-}
+    public abstract boolean isFinished(); // synchronized
 
-public double getVoltage() {
-    return 0;
-}
-
-public void setWheelPower(DriveSignal signal) {
-    
-}
-
-public void setWheelVelocity(DriveSignal setVelocity) {
-
-}
-
-/**
- * Update the motor outputs with the given control values.
- *
- * @param joyX     horizontal control input
- * @param joyY     vertical control input
- * @param throttle throttle control input scaled between 1 and -1 (-.8 is 10 %,
- *                 0 is 50%, 1.0 is 100%)
- */
-public void arcadeDrive(double joyX, double joyY, double throttle, boolean fullSpeed) {
-    
-}
-
-@Override
-public void update() {
-   
-}
-
-public void setRotation(Rotation2D angle) {
-
-}
-
-/**
- * Set Velocity PID for both sides of the drivetrain (to the same constants)
- */
-public void setDualVelocityPID(double kP, double kD, double kF) {
-
-}
-
-public void updateTurn() {
-
-}
-
-public void setShiftState(boolean state) {
-
-}
-
-public void updateRamseteController(boolean isStart) {
-
-}
-
-public void resetGyro() {
-
-}
-
-public boolean checkSubsystem() {
-    return false;
-}
-
-synchronized public void stopMovement() {
-
-}
-
-synchronized public boolean isFinished() {
-    return false;
-}
-
-public void clearStickyFaults() {
-}
+    public abstract void clearStickyFaults();
 
 }

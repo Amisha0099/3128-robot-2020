@@ -14,13 +14,17 @@ import org.team3128.common.hardware.motor.LazyCANSparkMax;
 import org.team3128.common.hardware.motor.LazyTalonFX;
 
 public class Arm extends Threaded {
-    public enum ArmState {
+    public static enum ArmState {
         STOWED(0), // arm is all the way down
         INTAKE(0), // intaking balls
-        STARTING(15), // within frame perimeter
-        STARTING_DOWN(30),
-        FAR_RANGE(60), // far range shooting
-        SHORT_RANGE(20); // short range shooting
+        STARTING(49), // within frame perimeter
+        STARTING_DOWN(40), // arm is pushed to release the intake
+        LOADING_STATION(46),
+        LONG_RANGE(52), // far range shooting
+        MID_RANGE(48.3),
+        SHORT_RANGE(5.5), // short range shooting
+        CLIMBING(75), // climbing
+        DEBUG(5);
 
         public double armAngle;
 
@@ -32,7 +36,7 @@ public class Arm extends Threaded {
     public static final Arm instance = new Arm();
     public LazyTalonFX ARM_MOTOR_LEADER, ARM_MOTOR_FOLLOWER;
     public DigitalInput LIMIT_SWITCH;
-    double setpoint;
+    public double setpoint;
     double current = 0;
     double error = 0;
     public double output = 0;
@@ -65,8 +69,9 @@ public class Arm extends Threaded {
         ARM_MOTOR_LEADER.setNeutralMode(Constants.ArmConstants.ARM_NEUTRAL_MODE);
         ARM_MOTOR_FOLLOWER.setNeutralMode(Constants.ArmConstants.ARM_NEUTRAL_MODE);
 
-        ARM_MOTOR_LEADER.setSelectedSensorPosition(0);
         ARM_MOTOR_LEADER.setSensorPhase(true);
+        ARM_MOTOR_LEADER.setSelectedSensorPosition(Constants.ArmConstants.STARTING_POSITION);
+
     }
 
     private void setSetpoint(double desiredPos) {
@@ -79,20 +84,20 @@ public class Arm extends Threaded {
     }
 
     public double armFeedForward(double desired) {
-        return 0; // true value = -0.46
+        return -0.3; // true value = -0.46
     }
 
     public double getAngle() {
         return (((getEncoderPos() / Constants.MechanismConstants.ENCODER_RESOLUTION_PER_ROTATION)
                 / Constants.ArmConstants.ARM_GEARING) * 360) % 360; // TODO: account for
-        // possible negative
+                                                                    // possible negative
     }
 
     public void zero() {
         setState(ArmState.STOWED);
     }
 
-    private double getEncoderPos() {
+    public double getEncoderPos() {
         return ARM_MOTOR_LEADER.getSelectedSensorPosition(0);
     }
 
@@ -101,11 +106,15 @@ public class Arm extends Threaded {
     }
 
     public boolean getLimitStatus() {
-        return LIMIT_SWITCH.get();
+        return !LIMIT_SWITCH.get();
+    }
+
+    public boolean isReady() {
+        return (plateauCount > Constants.ArmConstants.PLATEAU_THRESHOLD); 
     }
 
     @Override
-    public void update() {
+    public void update() {         
         if (setpoint > Constants.ArmConstants.MAX_ARM_ANGLE) {
             setpoint = Constants.ArmConstants.MAX_ARM_ANGLE;
         }
@@ -114,14 +123,16 @@ public class Arm extends Threaded {
             setpoint = 0;
         }
 
-        if (!getLimitStatus()) {
+
+        if (getLimitStatus()) {
             ARM_MOTOR_LEADER.setSelectedSensorPosition(0);
             ARM_MOTOR_FOLLOWER.setSelectedSensorPosition(0);
         }
-
+        
         if (ARM_STATE.armAngle != setpoint) {
             Log.info("ARM", "Setpoint override (setpoint has been set without using ArmState)");
         }
+        
         current = getAngle();
         error = setpoint - current;
         accumulator += error * Constants.MechanismConstants.DT;
@@ -139,12 +150,12 @@ public class Arm extends Threaded {
 
         output = voltage_output / voltage;
         if (output > 1) {
-            Log.info("ARM",
-                    "WARNING: Tried to set power above available voltage! Saturation limit SHOULD take care of this");
+            // Log.info("ARM",
+            //         "WARNING: Tried to set power above available voltage! Saturation limit SHOULD take care of this");
             output = 1;
         } else if (output < -1) {
-            Log.info("ARM",
-                    "WARNING: Tried to set power above available voltage! Saturation limit SHOULD take care of this ");
+            // Log.info("ARM",
+            //         "WARNING: Tried to set power above available voltage! Saturation limit SHOULD take care of this ");
             output = -1;
         }
 
@@ -154,13 +165,20 @@ public class Arm extends Threaded {
             plateauCount = 0;
         }
 
+
+        if((setpoint == 0) && !getLimitStatus()) {
+            output = Constants.ArmConstants.ZEROING_POWER;
+            // Log.info("Arm", "Using ZEROING_POWER to finish zeroing the arm.");
+        } else if((setpoint == 0) && getLimitStatus()) {
+            output = 0;
+            // Log.info("Arm", "In zero position, setting output to 0.");
+        }
+
+
         ARM_MOTOR_LEADER.set(ControlMode.PercentOutput, output);
 
         prevError = error;
-    }
 
-    public boolean isReady() {
-        return (plateauCount > Constants.ArmConstants.PLATEAU_THRESHOLD);
     }
 
 }

@@ -3,35 +3,46 @@ package org.team3128.compbot.autonomous;
 import org.team3128.compbot.subsystems.Constants;
 import edu.wpi.first.wpilibj.command.Command;
 import org.team3128.compbot.subsystems.Arm.ArmState;
-import org.team3128.compbot.subsystems.Arm;
+import org.team3128.compbot.subsystems.FalconDrive;
 import org.team3128.common.utility.Log;
 import edu.wpi.first.wpilibj.Timer;
+import org.team3128.common.drive.DriveSignal;
 
-public class CmdSetArm extends Command {
+public class CmdDrive extends Command {
     
-    Arm arm;
-    ArmState armState;
+    FalconDrive drive;
     double timeoutMs, startTime;
     
-    public CmdSetArm(Arm arm, ArmState armState, double timeoutMs) {
-        this.arm = arm;
-        this.armState = armState;
+    public CmdDrive(FalconDrive drive, double timeoutMs) {
+        this.drive = drive;
         this.timeoutMs = timeoutMs;
     }
     
     @Override
     protected void initialize() {
-        arm.setState(armState);
+        drive.setWheelPower(new DriveSignal(0.3, 0.3));
         startTime = Timer.getFPGATimestamp();
     }
     
     @Override
     protected boolean isFinished() {
-        if (arm.isReady() || ((Timer.getFPGATimestamp() - startTime) >= timeoutMs)){
+        if (((Timer.getFPGATimestamp() - startTime) >= timeoutMs)){
             return true;
         } else {
             return false;
         }
     }
+
+    @Override
+    protected void end() {
+        drive.setWheelPower(new DriveSignal(0, 0));
+    }
+
+    @Override
+    protected void interrupted() {
+        end();
+    }
+
+
 
 }

@@ -1,4 +1,4 @@
-package org.team3128.compbot.commands;
+package org.team3128.compbot.calibration;
 
 import java.lang.invoke.WrongMethodTypeException;
 import java.security.GuardedObject;
@@ -6,7 +6,6 @@ import java.util.Arrays;
 
 import org.team3128.compbot.subsystems.Constants;
 import org.team3128.compbot.subsystems.Arm;
-import org.team3128.compbot.subsystems.Hopper.HopperState;
 
 import edu.wpi.first.wpilibj.command.Command;
 

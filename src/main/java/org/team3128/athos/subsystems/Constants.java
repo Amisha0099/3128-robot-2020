@@ -108,7 +108,6 @@ public class Constants extends RobotConstants {
         public static final double BOTTOM_LIMELIGHT_ANGLE = 26.0 * Angle.DEGREES;
         public static final double BOTTOM_LIMELIGHT_DISTANCE_FROM_FRONT = 0 * Length.in;
 
-        public static CanDevices leftDriveLeader, rightDriveLeader, leftDriveFollower, rightDriveFollower;
-        public static CanDevices PDP;
+
 
 }

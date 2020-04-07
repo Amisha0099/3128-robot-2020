@@ -145,7 +145,7 @@ public abstract class NarwhalRobot extends RobotBase {
     /* ----------- Overridable periodic code ----------------- */
 
     protected double m_period;
-    public static final double kDefaultPeriod = 0.05;
+    public static final double kDefaultPeriod = 0.05; // 0.05
 
     private enum Mode {
         kNone, kDisabled, kAutonomous, kTeleop, kTest
@@ -269,11 +269,15 @@ public abstract class NarwhalRobot extends RobotBase {
             HAL.observeUserProgramDisabled();
             disabledPeriodic();
             m_watchdog.addEpoch("disablePeriodic()");
+        } else if(false) {
+            if (m_lastMode != Mode.kAutonomous) {
+                autonomousInit();
+                Log.info("NarwhalRobot", "Entered Autonomous");
+            }
+            m_lastMode = Mode.kAutonomous;
         } else if (isAutonomous()) {
             if (m_lastMode != Mode.kAutonomous) {
                 Log.info("NarwhalRobot", "Entering autonomous period.");
-
-                Scheduler.getInstance().removeAll();
 
                 setupAutoChooser();
 
@@ -295,7 +299,7 @@ public abstract class NarwhalRobot extends RobotBase {
             // Listener managers should ONLY be ticked in the 2019 game, DESTINATION: DEEP
             // SPACE
             // because of the driver-controllable sandstorm period
-            tickListenerManagers();
+            //tickListenerManagers();
             autonomousPeriodic();
 
             m_watchdog.addEpoch("autonomousPeriodic()");

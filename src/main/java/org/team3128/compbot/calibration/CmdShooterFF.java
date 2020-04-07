@@ -1,4 +1,4 @@
-package org.team3128.compbot.commands;
+package org.team3128.compbot.calibration;
 
 import org.team3128.compbot.subsystems.Constants;
 import org.team3128.compbot.subsystems.Shooter;
@@ -21,10 +21,10 @@ public class CmdShooterFF extends Command {
     double accumulator = 0;
     double prevError = 0;
 
-    public static int setpoint = 250;
+    public static int setpoint = 1000;
     public static int increment = 250;
     public static int counter = 0;
-    public static double sumOutput, sumBatteryVoltage, sumRPM, sumBusVoltage, startVoltage, voltageBattery,
+    public double sumOutput, sumBatteryVoltage, sumRPM, sumVoltage, startVoltage, voltageBattery,
             voltageMotor, currentTime, pastTime;
 
     int plateauCount = 0;
@@ -75,28 +75,27 @@ public class CmdShooterFF extends Command {
         shooter.setSetpoint(setpoint);
 
         voltageBattery = RobotController.getBatteryVoltage();
-        voltageMotor = Shooter.LEFT_SHOOTER.getBusVoltage();
+        voltageMotor = shooter.LEFT_SHOOTER.getBusVoltage();
 
         currentTime = Timer.getFPGATimestamp();
 
-        if (Math.abs(setpoint - shooter.getRPM()) <= 10) {
+        if (Math.abs(setpoint - shooter.getRPM()) <= 300) {
             counter += 1;
 
-            sumOutput += output;
-            sumBatteryVoltage += RobotController.getBatteryVoltage();
+            //sumOutput += output;
+            //sumBatteryVoltage += RobotController.getBatteryVoltage();
             sumRPM += shooter.getRPM();
-            sumBusVoltage += shooter.LEFT_SHOOTER.getBusVoltage();
+            sumVoltage += shooter.LEFT_SHOOTER.getBusVoltage() * shooter.LEFT_SHOOTER.getAppliedOutput();
 
-            if ((increment) != 0 && (counter >= 400)) {
-                Log.info("Shooter", "Current Setpoint: " + setpoint + " Average RPM: " + (sumRPM / counter)
-                        + " Average Voltage Battery: " + (sumBatteryVoltage / counter) + " Average Voltage Bus: "
-                        + (sumBusVoltage / counter) + " Average Percent Output: " + (sumOutput / counter));
+            if ((increment) != 0 && (counter >= 100)) {
+                Log.info("Shooter", "Current Setpoint: " + setpoint + " Average RPM: " + (sumRPM / counter) + " Average Voltage: "
+                        + (sumVoltage / counter));
                 setpoint += increment;
                 counter = 0;
-                sumOutput = 0;
-                sumBatteryVoltage = 0;
+                //sumOutput = 0;
+                //sumBatteryVoltage = 0;
                 sumRPM = 0;
-                sumBusVoltage = 0;
+                sumVoltage = 0;
             }
         }
 

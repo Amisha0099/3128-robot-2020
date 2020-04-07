@@ -11,8 +11,21 @@ import org.team3128.common.hardware.motor.LazyCANSparkMax;
 
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class Shooter extends Threaded {
+    public static enum ShooterState {
+        OFF(0),
+        LONG_RANGE(4800), // long range shooting
+        MID_RANGE(4080), // mid range shooting
+        SHORT_RANGE(2000); // short range shooting 3700
+
+        public double shooterRPM;
+
+        private ShooterState(double RPM) {
+            this.shooterRPM = RPM;
+        }
+    }
 
     public static final Shooter instance = new Shooter();
     public static LazyCANSparkMax LEFT_SHOOTER;
@@ -20,7 +33,7 @@ public class Shooter extends Threaded {
     public static CANEncoder SHOOTER_ENCODER;
 
     public static boolean DEBUG = true;
-    static double setpoint = 0; // rotations per minute
+    public static double setpoint = 0; // rotations per minute
     double current = 0;
     double error = 0;
     public double output = 0;
@@ -28,6 +41,9 @@ public class Shooter extends Threaded {
     double prevError = 0;
 
     int plateauCount = 0;
+
+    private StateTracker stateTracker = StateTracker.getInstance();
+    public ShooterState SHOOTER_STATE = ShooterState.MID_RANGE;
 
     private Shooter() {
         configMotors();
@@ -59,8 +75,14 @@ public class Shooter extends Threaded {
     }
 
     public void setSetpoint(double passedSetpoint) {
+        plateauCount = 0;
         setpoint = passedSetpoint;
-        Log.info("Shooter", "Set setpoint to" + String.valueOf(setpoint));
+        //Log.info("Shooter", "Set setpoint to" + String.valueOf(setpoint));
+    }
+
+    public void setState(ShooterState shooterState) {
+        SHOOTER_STATE = shooterState;
+        setSetpoint(shooterState.shooterRPM);
     }
 
     @Override
@@ -86,20 +108,26 @@ public class Shooter extends Threaded {
 
         prevError = error;
 
-        if (Math.abs(error) <= Constants.ShooterConstants.RPM_THRESHOLD) {
+        if ((Math.abs(error) <= Constants.ShooterConstants.RPM_THRESHOLD) && (setpoint != 0)) {
             plateauCount++;
         } else {
             plateauCount = 0;
         }
 
         if (output > 1) {
-            Log.info("SHOOTER",
-                    "WARNING: Tried to set power above available voltage! Saturation limit SHOULD take care of this ");
+            // Log.info("SHOOTER",
+            // "WARNING: Tried to set power above available voltage! Saturation limit SHOULD
+            // take care of this ");
             output = 1;
         } else if (output < -1) {
-            Log.info("SHOOTER",
-                    "WARNING: Tried to set power above available voltage! Saturation limit SHOULD take care of this ");
+            // Log.info("SHOOTER",
+            // "WARNING: Tried to set power above available voltage! Saturation limit SHOULD
+            // take care of this ");
             output = -1;
+        }
+
+        if(setpoint == 0) {
+            output = 0;
         }
 
         LEFT_SHOOTER.set(output);
@@ -107,16 +135,24 @@ public class Shooter extends Threaded {
     }
 
     public double shooterFeedForward(double desiredSetpoint) {
-        double ff = (0.00211 * desiredSetpoint) + 0.051; // 0.041
-        return ff;
+        //double ff = (0.00211 * desiredSetpoint) - 2; // 0.051
+        double ff = (0.00147 * desiredSetpoint)  - 0.2; // 0
+        if (setpoint != 0) {
+            return ff;
+        } else {
+            return 0;
+        }
     }
 
-    public double getRPMFromDistance(double distance) {
-        return 5300;
-        // TODO: relationship between RPM and distance
+    public double getRPMFromDistance() {
+        return stateTracker.getState().targetShooterState.shooterRPM;
     }
 
     public boolean isReady() {
         return (plateauCount > Constants.ShooterConstants.PLATEAU_COUNT);
+    }
+
+    public void queue(){
+        setState(stateTracker.getState().targetShooterState);
     }
 }

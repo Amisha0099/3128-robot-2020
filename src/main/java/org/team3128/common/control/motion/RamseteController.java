@@ -13,8 +13,8 @@ import org.team3128.common.utility.math.Translation2D;
 import org.team3128.common.utility.math.Rotation2D;
 import org.team3128.common.utility.Log;
 import org.team3128.common.utility.NarwhalUtility;
-import org.team3128.athos.subsystems.Constants;
-import org.team3128.athos.subsystems.RobotTracker;
+import org.team3128.compbot.subsystems.Constants;
+import org.team3128.compbot.subsystems.RobotTracker;
 
 public class RamseteController {
 
@@ -45,9 +45,9 @@ public class RamseteController {
 		double setpointLinearVelocity;
 		double setpointAngularVelocity;
 
-		double actualXPosition = robotPose.getTranslation().getX() * Constants.inchesToMeters; // actual X position in
+		double actualXPosition = robotPose.getTranslation().getX() * Constants.MechanismConstants.inchesToMeters; // actual X position in
 																								// meters
-		double actualYPosition = robotPose.getTranslation().getY() * Constants.inchesToMeters; // actual Y position in
+		double actualYPosition = robotPose.getTranslation().getY() * Constants.MechanismConstants.inchesToMeters; // actual Y position in
 																								// meters
 		double actualTheta = robotPose.getRotation().getRadians(); // actual theta in radians
 
@@ -73,8 +73,8 @@ public class RamseteController {
 		// meters
 
 		RobotTracker.getInstance().trajOdometry = new Pose2D(
-				new Translation2D(desiredXPosition / Constants.inchesToMeters,
-						desiredYPosition / Constants.inchesToMeters),
+				new Translation2D(desiredXPosition / Constants.MechanismConstants.inchesToMeters,
+						desiredYPosition / Constants.MechanismConstants.inchesToMeters),
 				new Rotation2D());
 		double desiredTheta = currentTrajectoryState.poseMeters.getRotation().getRadians(); // trajectory desired theta
 																							// in radians
@@ -97,7 +97,7 @@ public class RamseteController {
 		setpointAngularVelocity = desiredAngularVelocity + b * desiredLinearVelocity * sinc
 				* ((deltaY) * Math.cos(actualTheta) - (deltaX) * Math.sin(actualTheta)) + k * (deltaTheta);
 
-		setpointLinearVelocity /= Constants.inchesToMeters;
+		setpointLinearVelocity /= Constants.MechanismConstants.inchesToMeters;
 		double rightVelocity = setpointLinearVelocity + trackRadius * setpointAngularVelocity;
 		double leftVelocity = setpointLinearVelocity - trackRadius * setpointAngularVelocity;
 		return new AutoDriveSignal(new DriveSignal(leftVelocity, rightVelocity), false);

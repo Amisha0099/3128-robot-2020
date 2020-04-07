@@ -45,7 +45,12 @@ public class ThreadScheduler implements Runnable {
 					}
 				}
 			}
-			LockSupport.parkNanos(waitTime);
+			// LockSupport.parkNanos(waitTime);
+			try {
+				Thread.sleep(5);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 
